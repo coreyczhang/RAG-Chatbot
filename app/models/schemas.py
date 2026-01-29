@@ -20,12 +20,12 @@ class Message(BaseModel):
     role: str = Field(..., description="Role: 'user' or 'assistant'")
     content: str = Field(..., description="Message content")
     timestamp: datetime = Field(default_factory=datetime.now)
-    rag_sources: Optional[List[Dict[str, Any]]] = Field(default=None, description="RAG sources used for this message")
+    rag_sources: Optional[List[Dict[str, Any]]] = Field(default=None)
 
 
 class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1)
-    session_id: Optional[str] = Field(None, description="Session ID for conversation memory")
+    session_id: Optional[str] = Field(None, description="Session ID for conversation")
     k: int = Field(4, ge=1, le=20)
     filter: Optional[Dict[str, Any]] = None
     match_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
@@ -40,19 +40,42 @@ class SourceChunk(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    message: Message = Field(..., description="Assistant's response message with UUID")
+    message: Message
     session_id: str
     total_messages_in_session: int
 
 
+class SessionCreateRequest(BaseModel):
+    title: Optional[str] = Field(None, description="Optional session title")
+
+
 class SessionCreateResponse(BaseModel):
     session_id: str
+    title: str
     message: str
+
+
+class SessionListItem(BaseModel):
+    session_id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: Optional[int] = None
+
+
+class SessionListResponse(BaseModel):
+    sessions: List[SessionListItem]
+    total: int
 
 
 class SessionInfoResponse(BaseModel):
     session_id: str
+    title: str
     messages: List[Message]
     total_messages: int
     created_at: datetime
-    last_accessed: datetime
+    updated_at: datetime
+
+
+class SessionUpdateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
