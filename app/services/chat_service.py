@@ -1,9 +1,7 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from openai import OpenAI
 from langchain_core.documents import Document
-
-from app.core.config import settings
 
 
 class ChatService:
@@ -22,34 +20,31 @@ class ChatService:
         model: str,
         max_output_tokens: int,
         temperature: float,
+        system_prompt: Optional[str] = None,
     ) -> str:
         """
-        Generate answer using:
-        1. Full conversation history from session
-        2. RAG context from retrieved documents
+        Generate answer using agent-specific system prompt
         """
         # Build RAG context
         context = self._build_context_from_docs(retrieved_docs)
 
-        # System message
-        system_content = (
-            "You are an AI assistant. "
-            "Use the provided context to answer questions accurately. "
-            "You have access to conversation history and retrieved document context."
-        )
+        # Use agent's system prompt or default
+        if not system_prompt:
+            system_prompt = (
+                "You are an AI assistant. "
+                "Use the provided context to answer questions accurately. "
+                "You have access to conversation history and retrieved document context."
+            )
 
-        # Build messages array
-        messages = [{"role": "system", "content": system_content}]
+        # Build messages
+        messages = [{"role": "system", "content": system_prompt}]
         
-        # Add ALL previous conversation history
+        # Add conversation history
         messages.extend(conversation_history)
 
-        # Add current query WITH RAG context
-        user_content_with_context = (
-            f"Retrieved Context:\n{context}\n\n"
-            f"Question: {query}"
-        )
-        messages.append({"role": "user", "content": user_content_with_context})
+        # Add current query with RAG context
+        user_content = f"Retrieved Context:\n{context}\n\nQuestion: {query}"
+        messages.append({"role": "user", "content": user_content})
 
         # Call OpenAI
         resp = self.client.chat.completions.create(
